@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Tabela base de identificação e autenticação (RF1)
+model Usuario {
+  id                Int       @id @default(autoincrement())
+  nome              String
+  email             String    @unique
+  cpf               String    @unique
+  telefone          String?
+  senha             String
+  tipoUsuario       String // "paciente" | "estagiario" | "professor"
+  loginAttempts     Int       @default(0)
+  lockedUntil       DateTime?
+  resetToken        String?
+  resetTokenExpires DateTime?
+  createdAt         DateTime  @default(now())
+
+  paciente   Paciente?
+  estagiario Estagiario?
+  professor  Professor?
+}
+
+model Paciente {
+  id                 Int     @id
+  usuario            Usuario @relation(fields: [id], references: [id], onDelete: Cascade)
+  historicoConsultas String?
+}
+
+// Especialização de usuário que oferece atendimento (usada na busca - RF2)
+model Estagiario {
+  id                  Int      @id
+  usuario             Usuario  @relation(fields: [id], references: [id], onDelete: Cascade)
+  registroAcademico   String?
+  abordagem           String? // ex: TCC, Psicanálise, Humanista
+  especialidades      String? // JSON string: ["ansiedade","depressao"]
+  tipoAtendimento     String  @default("ambos") // presencial | online | ambos
+  horariosDisponiveis String? // JSON string: ["Segunda - Manhã", ...]
+  valorConsulta       Float?
+  avaliacao           Float    @default(0)
+  professorId         Int?
+  professor           Professor? @relation(fields: [professorId], references: [id])
+}
+
+model Professor {
+  id          Int          @id
+  usuario     Usuario      @relation(fields: [id], references: [id], onDelete: Cascade)
+  departamento String?
+  estagiarios Estagiario[]
+}
