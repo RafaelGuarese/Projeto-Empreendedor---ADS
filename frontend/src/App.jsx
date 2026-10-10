@@ -10,6 +10,8 @@ import ResetarSenhaPage from "./pages/ResetarSenhaPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import BuscaAtendimentoPage from "./pages/BuscaAtendimentoPage.jsx";
 import PerfilEstagiarioPage from "./pages/PerfilEstagiarioPage.jsx";
+import AgendamentoPage from "./pages/AgendamentoPage.jsx";
+import MeusAgendamentosPage from "./pages/MeusAgendamentosPage.jsx";
 
 function AreaAutenticada({ children }) {
   return (
@@ -62,6 +64,28 @@ export default function App() {
           <ProtectedRoute tiposPermitidos={["estagiario"]}>
             <AreaAutenticada>
               <PerfilEstagiarioPage />
+            </AreaAutenticada>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/agendar/:estagiarioId"
+        element={
+          <ProtectedRoute tiposPermitidos={["paciente"]}>
+            <AreaAutenticada>
+              <AgendamentoPage />
+            </AreaAutenticada>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/agendamentos"
+        element={
+          <ProtectedRoute tiposPermitidos={["paciente", "estagiario"]}>
+            <AreaAutenticada>
+              <MeusAgendamentosPage />
             </AreaAutenticada>
           </ProtectedRoute>
         }

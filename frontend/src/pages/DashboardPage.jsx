@@ -24,7 +24,10 @@ export default function DashboardPage() {
           </div>
           <div className="dashboard-card">
             <h3>Meus Agendamentos</h3>
-            <p>O agendamento de consultas (RF3) será disponibilizado em uma próxima etapa do sistema.</p>
+            <p>Acompanhe, remarque ou cancele suas consultas agendadas.</p>
+            <button className="botao-primario" onClick={() => navegar("/agendamentos")}>
+              Ver agendamentos
+            </button>
           </div>
         </div>
       )}
@@ -40,7 +43,10 @@ export default function DashboardPage() {
           </div>
           <div className="dashboard-card">
             <h3>Minha Agenda</h3>
-            <p>O gerenciamento de agenda e prontuários (RF3/RF6) será disponibilizado em uma próxima etapa.</p>
+            <p>Veja as consultas marcadas pelos pacientes e gerencie cancelamentos.</p>
+            <button className="botao-primario" onClick={() => navegar("/agendamentos")}>
+              Ver agenda
+            </button>
           </div>
         </div>
       )}

@@ -212,10 +212,34 @@ button {
   justify-content: space-between;
 }
 
+.navbar-marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .navbar .marca {
   font-size: 20px;
   font-weight: 700;
   color: var(--cor-primaria-escura);
+}
+
+.botao-home {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: var(--cor-primaria-clara);
+  color: var(--cor-primaria-escura);
+  padding: 0;
+}
+
+.botao-home:hover {
+  background: var(--cor-primaria);
+  color: white;
 }
 
 .navbar .usuario-info {
@@ -420,6 +444,12 @@ button {
   text-align: center;
   padding: 24px;
   color: var(--cor-texto-suave);
+}
+
+.painel-remarcar {
+  background: var(--cor-primaria-clara);
+  border-radius: 8px;
+  padding: 14px;
 }
 
 .tipo-atendimento-tag {

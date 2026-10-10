@@ -28,9 +28,10 @@ model Usuario {
 }
 
 model Paciente {
-  id                 Int     @id
-  usuario            Usuario @relation(fields: [id], references: [id], onDelete: Cascade)
+  id                 Int        @id
+  usuario            Usuario    @relation(fields: [id], references: [id], onDelete: Cascade)
   historicoConsultas String?
+  consultas          Consulta[]
 }
 
 // Especialização de usuário que oferece atendimento (usada na busca - RF2)
@@ -43,9 +44,10 @@ model Estagiario {
   tipoAtendimento     String  @default("ambos") // presencial | online | ambos
   horariosDisponiveis String? // JSON string: ["Segunda - Manhã", ...]
   valorConsulta       Float?
-  avaliacao           Float    @default(0)
+  avaliacao           Float      @default(0)
   professorId         Int?
   professor           Professor? @relation(fields: [professorId], references: [id])
+  consultas           Consulta[]
 }
 
 model Professor {
@@ -53,4 +55,24 @@ model Professor {
   usuario     Usuario      @relation(fields: [id], references: [id], onDelete: Cascade)
   departamento String?
   estagiarios Estagiario[]
+}
+
+// Agendamento de consulta entre paciente e estagiário (RF3) - inclui dados de teleconsulta (RF4)
+model Consulta {
+  id             Int        @id @default(autoincrement())
+  dataHora       DateTime
+  status         String     @default("agendada") // agendada | realizada | cancelada
+  tipo           String // presencial | online
+  linkVideo      String?
+  valor          Float?
+  canceladoPor   String? // paciente | estagiario
+  lembreteEnviado Boolean   @default(false)
+  createdAt      DateTime   @default(now())
+
+  pacienteId   Int
+  paciente     Paciente   @relation(fields: [pacienteId], references: [id])
+  estagiarioId Int
+  estagiario   Estagiario @relation(fields: [estagiarioId], references: [id])
+
+  @@index([estagiarioId, dataHora])
 }

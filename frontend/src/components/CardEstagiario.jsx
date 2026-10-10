@@ -1,7 +1,8 @@
-const RESPOSTA_AGENDAR =
-  'O agendamento (RF3) ainda não foi implementado nesta versão. Este botão demonstra o fluxo "Agendar" descrito no protótipo de Busca de Atendimento.';
+import { useNavigate } from "react-router-dom";
 
 export default function CardEstagiario({ estagiario }) {
+  const navegar = useNavigate();
+
   return (
     <article className="card-estagiario">
       <span className="abordagem-tag">{estagiario.abordagem}</span>
@@ -16,7 +17,7 @@ export default function CardEstagiario({ estagiario }) {
       <span className="avaliacao">★ {estagiario.avaliacao?.toFixed(1) ?? "-"}</span>
       <div className="rodape-card">
         <span className="valor">R$ {estagiario.valorConsulta?.toFixed(2)}</span>
-        <button className="botao-agendar" onClick={() => alert(RESPOSTA_AGENDAR)}>
+        <button className="botao-agendar" onClick={() => navegar(`/agendar/${estagiario.id}`)}>
           Agendar
         </button>
       </div>
