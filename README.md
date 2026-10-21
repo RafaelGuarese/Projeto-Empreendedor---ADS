@@ -2,12 +2,17 @@
 
 Implementação inicial da plataforma Psicoliga, cobrindo os requisitos funcionais:
 
-- **RF1 — Cadastro e Autenticação de Usuário**: cadastro (paciente/estagiário/professor), login, bloqueio após 3 tentativas incorretas, recuperação de senha por e-mail.
-- **RF2 — Busca de Atendimento**: busca de estagiários por abordagem, especialidade, tipo de atendimento e horário, com ordenação por preço/disponibilidade/avaliação.
-- **RF3 — Agendamento de Consultas**: paciente agenda, remarca ou cancela consultas a partir dos horários semanais do estagiário; estagiário também pode cancelar. Cancelamentos/remarcações exigem 12h de antecedência. Notificação de confirmação e lembrete 24h antes são simulados no console do backend.
-- **RF4 — Teleconsultas**: ao confirmar uma consulta online, o sistema gera automaticamente um link único de videochamada (Jitsi Meet), disponível para paciente e estagiário na tela "Meus Agendamentos".
-- **RF5 — Pagamentos**: o estagiário cadastra sua chave PIX no perfil. Ao agendar, o paciente recebe QR Code e código "copia e cola" (BR Code no padrão do Banco Central) com o valor da consulta, paga no app do banco e informa o pagamento — o sistema gera um comprovante para o estagiário, que confirma ou recusa o recebimento.
-- **RF6 — Prontuário Eletrônico**: o estagiário registra e edita sessões (data, duração, descrição, observações) dos pacientes atendidos, com busca por paciente. O conteúdo clínico é criptografado no banco (AES-256-GCM) e só é acessível ao estagiário responsável e ao seu professor orientador (somente leitura).
+- **RF1 — Cadastro e Autenticação de Usuário**
+  
+- **RF2 — Busca de Atendimento**
+  
+- **RF3 — Agendamento de Consultas**
+  
+- **RF4 — Teleconsultas**
+  
+- **RF5 — Pagamentos**
+  
+- **RF6 — Prontuário Eletrônico**
 
 
 ## Stack
