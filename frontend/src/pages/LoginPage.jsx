@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import api from "../api/client.js";
+import AuthLayout from "../components/AuthLayout.jsx";
+import Icone from "../components/Icone.jsx";
+import { Alerta } from "../components/Ui.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 
 export default function LoginPage() {
@@ -62,63 +65,65 @@ export default function LoginPage() {
   const segundos = String(segundosBloqueio % 60).padStart(2, "0");
 
   return (
-    <div className="pagina-central">
-      <div className="cartao-auth">
-        <div className="logo-auth">
-          <div className="titulo">Psicoliga</div>
-          <div className="subtitulo">Atendimento psicológico em estágio supervisionado</div>
+    <AuthLayout titulo="Bem-vindo(a) de volta" subtitulo="Entre com seu e-mail e senha para continuar.">
+      <form onSubmit={aoSubmeter} noValidate>
+        {erro && (
+          <Alerta tipo="erro">
+            {bloqueado ? `Conta bloqueada. Tente novamente em ${minutos}:${segundos}.` : erro}
+            {ofertarCadastro && (
+              <>
+                {" "}
+                <Link to="/cadastro">Criar uma conta</Link>
+              </>
+            )}
+          </Alerta>
+        )}
+
+        <div className="campo">
+          <label htmlFor="email">E-mail</label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="seuemail@exemplo.com"
+            autoComplete="username"
+          />
         </div>
 
-        <form onSubmit={aoSubmeter} style={{ marginTop: 24 }}>
-          {erro && (
-            <div className="alerta alerta-erro">
-              {bloqueado ? `Conta bloqueada. Tente novamente em ${minutos}:${segundos}.` : erro}
-              {ofertarCadastro && (
-                <>
-                  {" "}
-                  <Link to="/cadastro">Cadastre-se aqui.</Link>
-                </>
-              )}
-            </div>
-          )}
-
-          <div className="campo">
-            <label htmlFor="email">E-mail</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="seuemail@exemplo.com"
-              autoComplete="username"
-            />
-          </div>
-
-          <div className="campo campo-senha">
-            <label htmlFor="senha">Senha</label>
-            <input
-              id="senha"
-              type={mostrarSenha ? "text" : "password"}
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              placeholder="••••••••"
-              autoComplete="current-password"
-            />
-            <button type="button" onClick={() => setMostrarSenha((v) => !v)}>
-              {mostrarSenha ? "Ocultar" : "Mostrar"}
-            </button>
-          </div>
-
-          <button className="botao-primario" type="submit" disabled={enviando || bloqueado}>
-            {enviando ? "Entrando..." : "Entrar"}
+        <div className="campo campo-senha">
+          <label htmlFor="senha">Senha</label>
+          <input
+            id="senha"
+            type={mostrarSenha ? "text" : "password"}
+            value={senha}
+            onChange={(e) => setSenha(e.target.value)}
+            placeholder="Sua senha"
+            autoComplete="current-password"
+          />
+          <button
+            type="button"
+            className="botao-olho"
+            onClick={() => setMostrarSenha((v) => !v)}
+            aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
+            title={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
+          >
+            <Icone nome={mostrarSenha ? "olhoFechado" : "olho"} tamanho={18} />
           </button>
-        </form>
+        </div>
 
-        <div className="links-auth">
-          <Link to="/cadastro">Cadastrar-se</Link>
+        <button className="botao botao-primario botao-bloco botao-grande" type="submit" disabled={enviando || bloqueado}>
+          {enviando ? "Entrando..." : "Entrar"}
+        </button>
+
+        <div className="auth-links">
           <Link to="/esqueci-senha">Esqueceu sua senha?</Link>
         </div>
-      </div>
-    </div>
+      </form>
+
+      <p className="auth-rodape">
+        Ainda não tem conta? <Link to="/cadastro">Cadastre-se</Link>
+      </p>
+    </AuthLayout>
   );
 }

@@ -1,12 +1,13 @@
 import { Navigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext.jsx";
+import { Carregando } from "./Ui.jsx";
 
 export default function ProtectedRoute({ children, tiposPermitidos }) {
   const { usuario, carregando } = useAuth();
 
   if (carregando) {
-    return <div className="mensagem-carregando">Carregando...</div>;
+    return <Carregando />;
   }
 
   if (!usuario) {

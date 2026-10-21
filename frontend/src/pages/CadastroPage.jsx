@@ -2,9 +2,18 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import api from "../api/client.js";
+import AuthLayout from "../components/AuthLayout.jsx";
+import Icone from "../components/Icone.jsx";
+import { Alerta } from "../components/Ui.jsx";
 import { mascararCpf, mascararTelefone } from "../utils/masks.js";
 
 const SENHA_REGEX = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+
+const PERFIS = [
+  { valor: "paciente", titulo: "Paciente", descricao: "Busco atendimento", icone: "coracao" },
+  { valor: "estagiario", titulo: "Estagiário(a)", descricao: "Ofereço atendimento", icone: "usuario" },
+  { valor: "professor", titulo: "Professor(a)", descricao: "Supervisiono", icone: "pessoas" },
+];
 
 export default function CadastroPage() {
   const [form, setForm] = useState({
@@ -27,7 +36,10 @@ export default function CadastroPage() {
   }
 
   function validarLocalmente() {
-    if (!form.tipoUsuario || !form.nome || !form.email || !form.cpf || !form.senha || !form.confirmarSenha) {
+    if (!form.tipoUsuario) {
+      return "Escolha como você vai usar a plataforma.";
+    }
+    if (!form.nome || !form.email || !form.cpf || !form.senha || !form.confirmarSenha) {
       return "Preencha todos os campos obrigatórios.";
     }
     if (form.senha !== form.confirmarSenha) {
@@ -67,47 +79,52 @@ export default function CadastroPage() {
   }
 
   return (
-    <div className="pagina-central">
-      <div className="cartao-auth" style={{ maxWidth: 460 }}>
-        <div className="logo-auth">
-          <div className="titulo">Criar conta</div>
-          <div className="subtitulo">Junte-se à plataforma Psicoliga</div>
+    <AuthLayout titulo="Criar conta" subtitulo="Leva menos de um minuto. Todos os campos são obrigatórios, exceto o telefone." largo>
+      <form onSubmit={aoSubmeter} noValidate>
+        {erro && <Alerta tipo="erro">{erro}</Alerta>}
+        {sucesso && <Alerta tipo="sucesso">{sucesso}</Alerta>}
+
+        <div className="campo">
+          <span className="rotulo">Como você vai usar o Psicoliga?</span>
+          <div className="opcoes-perfil" role="radiogroup" aria-label="Tipo de usuário">
+            {PERFIS.map((perfil) => (
+              <button
+                key={perfil.valor}
+                type="button"
+                role="radio"
+                aria-checked={form.tipoUsuario === perfil.valor}
+                className={`opcao-perfil ${form.tipoUsuario === perfil.valor ? "ativa" : ""}`}
+                onClick={() => atualizar("tipoUsuario", perfil.valor)}
+              >
+                <Icone nome={perfil.icone} tamanho={22} />
+                <span>
+                  {perfil.titulo}
+                  <br />
+                  <small>{perfil.descricao}</small>
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
 
-        <form onSubmit={aoSubmeter} style={{ marginTop: 24 }}>
-          {erro && <div className="alerta alerta-erro">{erro}</div>}
-          {sucesso && <div className="alerta alerta-sucesso">{sucesso}</div>}
+        <div className="campo">
+          <label htmlFor="nome">Nome completo</label>
+          <input id="nome" value={form.nome} onChange={(e) => atualizar("nome", e.target.value)} autoComplete="name" />
+        </div>
 
-          <div className="campo">
-            <label htmlFor="tipoUsuario">Tipo de usuário</label>
-            <select
-              id="tipoUsuario"
-              value={form.tipoUsuario}
-              onChange={(e) => atualizar("tipoUsuario", e.target.value)}
-            >
-              <option value="">Selecione...</option>
-              <option value="paciente">Paciente</option>
-              <option value="estagiario">Estagiário</option>
-              <option value="professor">Professor Orientador</option>
-            </select>
-          </div>
+        <div className="campo">
+          <label htmlFor="email">E-mail</label>
+          <input
+            id="email"
+            type="email"
+            value={form.email}
+            onChange={(e) => atualizar("email", e.target.value)}
+            placeholder="seuemail@exemplo.com"
+            autoComplete="username"
+          />
+        </div>
 
-          <div className="campo">
-            <label htmlFor="nome">Nome completo</label>
-            <input id="nome" value={form.nome} onChange={(e) => atualizar("nome", e.target.value)} />
-          </div>
-
-          <div className="campo">
-            <label htmlFor="email">E-mail</label>
-            <input
-              id="email"
-              type="email"
-              value={form.email}
-              onChange={(e) => atualizar("email", e.target.value)}
-              autoComplete="username"
-            />
-          </div>
-
+        <div className="grade-2">
           <div className="campo">
             <label htmlFor="cpf">CPF</label>
             <input
@@ -115,9 +132,9 @@ export default function CadastroPage() {
               value={form.cpf}
               onChange={(e) => atualizar("cpf", mascararCpf(e.target.value))}
               placeholder="000.000.000-00"
+              inputMode="numeric"
             />
           </div>
-
           <div className="campo">
             <label htmlFor="telefone">Telefone</label>
             <input
@@ -125,9 +142,12 @@ export default function CadastroPage() {
               value={form.telefone}
               onChange={(e) => atualizar("telefone", mascararTelefone(e.target.value))}
               placeholder="(00) 00000-0000"
+              inputMode="tel"
             />
           </div>
+        </div>
 
+        <div className="grade-2">
           <div className="campo">
             <label htmlFor="senha">Senha</label>
             <input
@@ -138,7 +158,6 @@ export default function CadastroPage() {
               autoComplete="new-password"
             />
           </div>
-
           <div className="campo">
             <label htmlFor="confirmarSenha">Confirmar senha</label>
             <input
@@ -149,16 +168,19 @@ export default function CadastroPage() {
               autoComplete="new-password"
             />
           </div>
-
-          <button className="botao-primario" type="submit" disabled={enviando}>
-            {enviando ? "Cadastrando..." : "Cadastrar"}
-          </button>
-        </form>
-
-        <div className="linha-divisoria">
-          Já tem conta? <Link to="/login">Voltar para o login</Link>
         </div>
-      </div>
-    </div>
+        <p className="campo-ajuda" style={{ marginTop: -8, marginBottom: 20 }}>
+          Mínimo de 8 caracteres, com letras e números.
+        </p>
+
+        <button className="botao botao-primario botao-bloco botao-grande" type="submit" disabled={enviando}>
+          {enviando ? "Cadastrando..." : "Criar conta"}
+        </button>
+      </form>
+
+      <p className="auth-rodape">
+        Já tem conta? <Link to="/login">Entrar</Link>
+      </p>
+    </AuthLayout>
   );
 }

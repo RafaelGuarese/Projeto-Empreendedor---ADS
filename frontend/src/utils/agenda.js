@@ -11,6 +11,18 @@ export function agruparPorData(slotsIso) {
   return Array.from(grupos.entries());
 }
 
+export function partesData(iso) {
+  const data = new Date(iso);
+  return {
+    dia: data.toLocaleDateString("pt-BR", { day: "2-digit" }),
+    mes: data.toLocaleDateString("pt-BR", { month: "short" }).replace(".", ""),
+    semana: data.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", ""),
+    semanaLonga: data.toLocaleDateString("pt-BR", { weekday: "long" }),
+    hora: data.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+    chaveDia: data.toLocaleDateString("sv-SE"),
+  };
+}
+
 export function formatarDataHora(iso) {
   return new Date(iso).toLocaleString("pt-BR", {
     weekday: "short",

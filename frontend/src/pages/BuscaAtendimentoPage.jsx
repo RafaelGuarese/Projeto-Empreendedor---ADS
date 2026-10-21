@@ -2,18 +2,15 @@ import { useEffect, useState } from "react";
 
 import api from "../api/client.js";
 import CardEstagiario from "../components/CardEstagiario.jsx";
+import Icone from "../components/Icone.jsx";
+import { Alerta, CabecalhoPagina, Carregando, EstadoVazio } from "../components/Ui.jsx";
 
 const PERIODOS = ["Manhã", "Tarde", "Noite"];
+const FILTROS_VAZIOS = { abordagem: "", especialidade: "", tipoAtendimento: "", horario: "", precoMax: "" };
 
 export default function BuscaAtendimentoPage() {
   const [opcoes, setOpcoes] = useState({ abordagens: [], especialidades: [] });
-  const [filtros, setFiltros] = useState({
-    abordagem: "",
-    especialidade: "",
-    tipoAtendimento: "",
-    horario: "",
-    precoMax: "",
-  });
+  const [filtros, setFiltros] = useState(FILTROS_VAZIOS);
   const [ordenarPor, setOrdenarPor] = useState("avaliacao");
   const [resultados, setResultados] = useState([]);
   const [total, setTotal] = useState(null);
@@ -71,114 +68,146 @@ export default function BuscaAtendimentoPage() {
     if (buscaRealizada) buscar(valor);
   }
 
+  function limparFiltros() {
+    setFiltros(FILTROS_VAZIOS);
+    setResultados([]);
+    setTotal(null);
+    setErro(null);
+    setBuscaRealizada(false);
+  }
+
+  const temFiltro = Object.values(filtros).some((v) => v);
+
   return (
     <div className="conteudo">
-      <div className="dashboard-cabecalho">
-        <h1>Buscar Atendimento</h1>
-        <p>Encontre estagiários disponíveis conforme sua preferência de abordagem e necessidade.</p>
-      </div>
+      <CabecalhoPagina
+        sobretitulo="Encontre seu atendimento"
+        titulo="Buscar atendimento"
+        subtitulo="Escolha o que é importante para você e veja os estagiários disponíveis."
+      />
 
-      <div className="busca-layout" style={{ marginTop: 20 }}>
-        <aside className="painel-filtros">
-          <h3>Filtros</h3>
-
-          <div className="campo">
-            <label htmlFor="abordagem">Abordagem psicológica</label>
-            <select
-              id="abordagem"
-              value={filtros.abordagem}
-              onChange={(e) => atualizarFiltro("abordagem", e.target.value)}
-            >
-              <option value="">Qualquer</option>
-              {opcoes.abordagens.map((a) => (
-                <option key={a} value={a}>
-                  {a}
-                </option>
-              ))}
-            </select>
+      <div className="busca-layout">
+        <aside className="painel-lateral">
+          <div className="painel-lateral-titulo">
+            <Icone nome="filtro" tamanho={18} /> Filtros
           </div>
 
-          <div className="campo">
-            <label htmlFor="especialidade">Especialidade / necessidade</label>
-            <select
-              id="especialidade"
-              value={filtros.especialidade}
-              onChange={(e) => atualizarFiltro("especialidade", e.target.value)}
-            >
-              <option value="">Qualquer</option>
-              {opcoes.especialidades.map((esp) => (
-                <option key={esp} value={esp}>
-                  {esp}
-                </option>
-              ))}
-            </select>
-          </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              buscar();
+            }}
+          >
+            <div className="campo">
+              <label htmlFor="especialidade">O que você precisa?</label>
+              <select id="especialidade" value={filtros.especialidade} onChange={(e) => atualizarFiltro("especialidade", e.target.value)}>
+                <option value="">Qualquer necessidade</option>
+                {opcoes.especialidades.map((esp) => (
+                  <option key={esp} value={esp}>
+                    {esp.charAt(0).toUpperCase() + esp.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div className="campo">
-            <label htmlFor="tipoAtendimento">Tipo de atendimento</label>
-            <select
-              id="tipoAtendimento"
-              value={filtros.tipoAtendimento}
-              onChange={(e) => atualizarFiltro("tipoAtendimento", e.target.value)}
-            >
-              <option value="">Qualquer</option>
-              <option value="presencial">Presencial</option>
-              <option value="online">Online</option>
-            </select>
-          </div>
+            <div className="campo">
+              <label htmlFor="abordagem">Abordagem psicológica</label>
+              <select id="abordagem" value={filtros.abordagem} onChange={(e) => atualizarFiltro("abordagem", e.target.value)}>
+                <option value="">Qualquer abordagem</option>
+                {opcoes.abordagens.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div className="campo">
-            <label htmlFor="horario">Período</label>
-            <select id="horario" value={filtros.horario} onChange={(e) => atualizarFiltro("horario", e.target.value)}>
-              <option value="">Qualquer</option>
-              {PERIODOS.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div className="campo">
+              <span className="rotulo">Tipo de atendimento</span>
+              <div className="segmentado" style={{ display: "flex" }}>
+                {[
+                  { valor: "", texto: "Todos" },
+                  { valor: "presencial", texto: "Presencial" },
+                  { valor: "online", texto: "Online" },
+                ].map((op) => (
+                  <button
+                    key={op.valor || "todos"}
+                    type="button"
+                    style={{ flex: 1, justifyContent: "center", padding: "8px 6px" }}
+                    className={filtros.tipoAtendimento === op.valor ? "ativo" : ""}
+                    onClick={() => atualizarFiltro("tipoAtendimento", op.valor)}
+                  >
+                    {op.texto}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          <div className="campo">
-            <label htmlFor="precoMax">Valor máximo (R$)</label>
-            <input
-              id="precoMax"
-              type="number"
-              min="0"
-              value={filtros.precoMax}
-              onChange={(e) => atualizarFiltro("precoMax", e.target.value)}
-              placeholder="Ex: 100"
-            />
-          </div>
+            <div className="campo">
+              <span className="rotulo">Período</span>
+              <div className="chips">
+                {PERIODOS.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    className={`chip ${filtros.horario === p ? "ativo" : ""}`}
+                    onClick={() => atualizarFiltro("horario", filtros.horario === p ? "" : p)}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          <button className="botao-primario" onClick={() => buscar()} disabled={carregando}>
-            {carregando ? "Buscando..." : "Buscar"}
-          </button>
+            <div className="campo">
+              <label htmlFor="precoMax">Valor máximo por sessão</label>
+              <input
+                id="precoMax"
+                type="number"
+                min="0"
+                value={filtros.precoMax}
+                onChange={(e) => atualizarFiltro("precoMax", e.target.value)}
+                placeholder="Ex: 100"
+              />
+            </div>
+
+            <button className="botao botao-primario botao-bloco" type="submit" disabled={carregando}>
+              <Icone nome="busca" tamanho={18} />
+              {carregando ? "Buscando..." : "Buscar"}
+            </button>
+            {temFiltro && (
+              <button type="button" className="botao botao-texto botao-bloco" style={{ marginTop: 6 }} onClick={limparFiltros}>
+                Limpar filtros
+              </button>
+            )}
+          </form>
         </aside>
 
         <section>
-          {erro && <div className="alerta alerta-erro">{erro}</div>}
+          {erro && <Alerta tipo="aviso">{erro}</Alerta>}
 
-          {buscaRealizada && !erro && (
+          {buscaRealizada && !erro && !carregando && (
             <div className="resultados-cabecalho">
               <span className="contagem">
-                {total !== null ? `${total} resultado(s) encontrado(s)` : ""}
+                {total === 1 ? "1 estagiário encontrado" : `${total ?? 0} estagiários encontrados`}
               </span>
-              <div className="campo" style={{ margin: 0, minWidth: 200 }}>
-                <select value={ordenarPor} onChange={(e) => aoMudarOrdenacao(e.target.value)}>
-                  <option value="avaliacao">Ordenar por: Avaliação</option>
-                  <option value="preco_asc">Ordenar por: Menor preço</option>
-                  <option value="preco_desc">Ordenar por: Maior preço</option>
-                  <option value="disponibilidade">Ordenar por: Disponibilidade</option>
+              <div className="campo">
+                <select value={ordenarPor} onChange={(e) => aoMudarOrdenacao(e.target.value)} aria-label="Ordenar resultados">
+                  <option value="avaliacao">Ordenar por: melhor avaliação</option>
+                  <option value="preco_asc">Ordenar por: menor preço</option>
+                  <option value="preco_desc">Ordenar por: maior preço</option>
+                  <option value="disponibilidade">Ordenar por: mais horários</option>
                 </select>
               </div>
             </div>
           )}
 
-          {carregando && <div className="mensagem-carregando">Buscando estagiários disponíveis...</div>}
+          {carregando && <Carregando texto="Buscando estagiários disponíveis..." />}
 
           {!carregando && buscaRealizada && resultados.length === 0 && !erro && (
-            <div className="estado-vazio">{mensagem || "Nenhum profissional encontrado."}</div>
+            <EstadoVazio icone="busca" titulo="Nenhum estagiário encontrado">
+              {mensagem || "Tente remover algum filtro ou escolher outro período."}
+            </EstadoVazio>
           )}
 
           {!carregando && resultados.length > 0 && (
@@ -190,7 +219,9 @@ export default function BuscaAtendimentoPage() {
           )}
 
           {!buscaRealizada && !erro && (
-            <div className="estado-vazio">Selecione ao menos um filtro e clique em "Buscar" para ver os resultados.</div>
+            <EstadoVazio icone="filtro" titulo="Comece pelos filtros">
+              Escolha ao menos um filtro ao lado — por exemplo, a sua necessidade — e clique em "Buscar".
+            </EstadoVazio>
           )}
         </section>
       </div>

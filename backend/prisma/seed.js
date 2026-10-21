@@ -25,6 +25,9 @@ async function criarUsuarioComPerfil({ nome, email, cpf, telefone, tipoUsuario, 
 
 async function main() {
   console.log("Limpando dados existentes...");
+  await prisma.prontuario.deleteMany();
+  await prisma.pagamento.deleteMany();
+  await prisma.consulta.deleteMany();
   await prisma.estagiario.deleteMany();
   await prisma.paciente.deleteMany();
   await prisma.professor.deleteMany();
@@ -135,7 +138,9 @@ async function main() {
   ];
 
   for (const est of estagiarios) {
-    await criarUsuarioComPerfil({ ...est, tipoUsuario: "estagiario" });
+    // Chave PIX de demonstração (e-mail fictício) para o fluxo de pagamento - RF5
+    const perfil = { ...est.perfil, tipoChavePix: "email", chavePix: est.email };
+    await criarUsuarioComPerfil({ ...est, perfil, tipoUsuario: "estagiario" });
   }
 
   console.log("\nSeed concluído!");

@@ -6,7 +6,10 @@ const authRoutes = require("./routes/auth");
 const atendimentosRoutes = require("./routes/atendimentos");
 const estagiariosRoutes = require("./routes/estagiarios");
 const consultasRoutes = require("./routes/consultas");
+const pagamentosRoutes = require("./routes/pagamentos");
+const prontuariosRoutes = require("./routes/prontuarios");
 const { iniciarJobLembretes } = require("./jobs/lembretes");
+const { iniciarJobReservas } = require("./jobs/reservas");
 
 const app = express();
 
@@ -19,6 +22,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/atendimentos", atendimentosRoutes);
 app.use("/api/estagiarios", estagiariosRoutes);
 app.use("/api/consultas", consultasRoutes);
+app.use("/api/pagamentos", pagamentosRoutes);
+app.use("/api/prontuarios", prontuariosRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ codigo: "msg_rota_nao_encontrada", mensagem: "Rota não encontrada." });
@@ -35,4 +40,5 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Psicoliga API rodando em http://localhost:${PORT}`);
   iniciarJobLembretes();
+  iniciarJobReservas();
 });

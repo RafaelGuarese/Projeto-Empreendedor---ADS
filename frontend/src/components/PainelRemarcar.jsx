@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 
 import api from "../api/client.js";
-import { agruparPorData } from "../utils/agenda.js";
+import SeletorHorario from "./SeletorHorario.jsx";
+import { Alerta, Carregando } from "./Ui.jsx";
 
 export default function PainelRemarcar({ consulta, onRemarcada, onCancelar }) {
   const [slots, setSlots] = useState([]);
@@ -17,8 +18,6 @@ export default function PainelRemarcar({ consulta, onRemarcada, onCancelar }) {
       .catch((err) => setErro(err.response?.data?.mensagem || "Não foi possível carregar os horários."))
       .finally(() => setCarregando(false));
   }, [consulta.estagiario.id]);
-
-  const grupos = agruparPorData(slots);
 
   async function confirmar() {
     if (!slotSelecionado) {
@@ -41,38 +40,22 @@ export default function PainelRemarcar({ consulta, onRemarcada, onCancelar }) {
 
   return (
     <div className="painel-remarcar">
-      {erro && <div className="alerta alerta-erro">{erro}</div>}
+      <h4>Escolha a nova data</h4>
+      {erro && <Alerta tipo="erro">{erro}</Alerta>}
 
       {carregando ? (
-        <div className="mensagem-carregando">Carregando horários...</div>
-      ) : grupos.length === 0 ? (
-        <div className="estado-vazio">Nenhum horário disponível para remarcar.</div>
+        <Carregando texto="Carregando horários..." />
+      ) : slots.length === 0 ? (
+        <p className="campo-ajuda">Nenhum outro horário disponível para remarcar.</p>
       ) : (
-        grupos.map(([dataLabel, horarios]) => (
-          <div key={dataLabel} style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, textTransform: "capitalize", marginBottom: 6 }}>{dataLabel}</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {horarios.map((h) => (
-                <button
-                  key={h.iso}
-                  type="button"
-                  className={slotSelecionado === h.iso ? "botao-primario" : "botao-secundario"}
-                  style={{ width: "auto", padding: "6px 12px", fontSize: 13 }}
-                  onClick={() => setSlotSelecionado(h.iso)}
-                >
-                  {h.hora}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))
+        <SeletorHorario slots={slots} selecionado={slotSelecionado} onSelecionar={setSlotSelecionado} />
       )}
 
-      <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-        <button className="botao-primario" style={{ width: "auto", padding: "8px 16px" }} onClick={confirmar} disabled={enviando}>
+      <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
+        <button className="botao botao-primario" onClick={confirmar} disabled={enviando || !slotSelecionado}>
           {enviando ? "Salvando..." : "Confirmar nova data"}
         </button>
-        <button type="button" className="botao-secundario" style={{ width: "auto", padding: "8px 16px" }} onClick={onCancelar}>
+        <button type="button" className="botao botao-secundario" onClick={onCancelar}>
           Voltar
         </button>
       </div>

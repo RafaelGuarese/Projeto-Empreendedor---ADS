@@ -2,6 +2,9 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import api from "../api/client.js";
+import AuthLayout from "../components/AuthLayout.jsx";
+import Icone from "../components/Icone.jsx";
+import { Alerta } from "../components/Ui.jsx";
 
 export default function ResetarSenhaPage() {
   const { token } = useParams();
@@ -31,46 +34,43 @@ export default function ResetarSenhaPage() {
   }
 
   return (
-    <div className="pagina-central">
-      <div className="cartao-auth">
-        <div className="logo-auth">
-          <div className="titulo">Nova senha</div>
-          <div className="subtitulo">Defina uma nova senha para sua conta</div>
+    <AuthLayout titulo="Criar nova senha" subtitulo="Use no mínimo 8 caracteres, com letras e números.">
+      <form onSubmit={aoSubmeter} noValidate>
+        {erro && <Alerta tipo="erro">{erro}</Alerta>}
+        {sucesso && <Alerta tipo="sucesso">{sucesso}</Alerta>}
+
+        <div className="campo">
+          <label htmlFor="novaSenha">Nova senha</label>
+          <input
+            id="novaSenha"
+            type="password"
+            value={novaSenha}
+            onChange={(e) => setNovaSenha(e.target.value)}
+            autoComplete="new-password"
+          />
         </div>
 
-        <form onSubmit={aoSubmeter} style={{ marginTop: 24 }}>
-          {erro && <div className="alerta alerta-erro">{erro}</div>}
-          {sucesso && <div className="alerta alerta-sucesso">{sucesso}</div>}
-
-          <div className="campo">
-            <label htmlFor="novaSenha">Nova senha</label>
-            <input
-              id="novaSenha"
-              type="password"
-              value={novaSenha}
-              onChange={(e) => setNovaSenha(e.target.value)}
-            />
-          </div>
-
-          <div className="campo">
-            <label htmlFor="confirmarSenha">Confirmar nova senha</label>
-            <input
-              id="confirmarSenha"
-              type="password"
-              value={confirmarSenha}
-              onChange={(e) => setConfirmarSenha(e.target.value)}
-            />
-          </div>
-
-          <button className="botao-primario" type="submit" disabled={enviando}>
-            {enviando ? "Salvando..." : "Redefinir senha"}
-          </button>
-        </form>
-
-        <div className="linha-divisoria">
-          <Link to="/login">Voltar para o login</Link>
+        <div className="campo">
+          <label htmlFor="confirmarSenha">Confirmar nova senha</label>
+          <input
+            id="confirmarSenha"
+            type="password"
+            value={confirmarSenha}
+            onChange={(e) => setConfirmarSenha(e.target.value)}
+            autoComplete="new-password"
+          />
         </div>
-      </div>
-    </div>
+
+        <button className="botao botao-primario botao-bloco botao-grande" type="submit" disabled={enviando}>
+          {enviando ? "Salvando..." : "Redefinir senha"}
+        </button>
+      </form>
+
+      <p className="auth-rodape">
+        <Link to="/login" className="link-voltar" style={{ margin: 0 }}>
+          <Icone nome="voltar" tamanho={16} /> Voltar para o login
+        </Link>
+      </p>
+    </AuthLayout>
   );
 }

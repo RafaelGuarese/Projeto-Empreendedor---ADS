@@ -1,19 +1,22 @@
 const express = require("express");
-const crypto = require("crypto");
+const QRCode = require("qrcode");
 
 const prisma = require("../prismaClient");
 const { autenticar, exigirTipo } = require("../middleware/auth");
 const { gerarSlotsFuturos, horasAte, HORAS_MINIMAS_CANCELAMENTO } = require("../utils/agenda");
 const { paraLista } = require("../utils/listas");
+const { gerarPixCopiaECola } = require("../utils/pix");
 
 const router = express.Router();
 
-function gerarLinkTeleconsulta() {
-  // RF4 - link único de videochamada, gerado automaticamente na confirmação do agendamento.
-  // Usa o Jitsi Meet (sala pública, sem necessidade de credenciais de API) como plataforma de redirecionamento.
-  const sala = crypto.randomBytes(8).toString("hex");
-  return `https://meet.jit.si/psicoliga-${sala}`;
-}
+// Tempo que o horário fica reservado aguardando o pagamento PIX
+const RESERVA_MINUTOS = 30;
+
+const INCLUDE_CONSULTA = {
+  paciente: { include: { usuario: { select: { nome: true } } } },
+  estagiario: { include: { usuario: { select: { nome: true } } } },
+  pagamento: { select: { id: true, status: true, numeroComprovante: true, expiraEm: true } },
+};
 
 async function horariosLivres(estagiario) {
   const slots = gerarSlotsFuturos(estagiario.horariosDisponiveis);
@@ -34,9 +37,10 @@ function formatarConsulta(consulta) {
     dataHora: consulta.dataHora,
     status: consulta.status,
     tipo: consulta.tipo,
-    linkVideo: consulta.linkVideo,
+    linkVideo: consulta.status === "agendada" ? consulta.linkVideo : null,
     valor: consulta.valor,
     canceladoPor: consulta.canceladoPor,
+    pagamento: consulta.pagamento || null,
     paciente: consulta.paciente ? { id: consulta.paciente.id, nome: consulta.paciente.usuario.nome } : undefined,
     estagiario: consulta.estagiario
       ? { id: consulta.estagiario.id, nome: consulta.estagiario.usuario.nome, abordagem: consulta.estagiario.abordagem }
@@ -68,12 +72,14 @@ router.get("/estagiario/:id/disponibilidade", autenticar, exigirTipo("paciente")
       tipoAtendimento: estagiario.tipoAtendimento,
       valorConsulta: estagiario.valorConsulta,
       avaliacao: estagiario.avaliacao,
+      aceitaPix: Boolean(estagiario.chavePix),
     },
     horariosDisponiveis: slots.map((s) => s.toISOString()),
   });
 });
 
-// UC04 - Agendar Consulta (RF3), com geração automática de link de teleconsulta quando online (RF4)
+// UC04 - Agendar Consulta (RF3): reserva o horário e gera a cobrança PIX (RF5).
+// A consulta só é confirmada (status "agendada") depois que o paciente informa o pagamento.
 router.post("/", autenticar, exigirTipo("paciente"), async (req, res) => {
   const { estagiarioId, dataHora, tipo } = req.body || {};
 
@@ -81,10 +87,20 @@ router.post("/", autenticar, exigirTipo("paciente"), async (req, res) => {
     return res.status(400).json({ codigo: "msg_campos_invalidos", mensagem: "Selecione um estagiário e um horário." });
   }
 
-  const estagiario = await prisma.estagiario.findUnique({ where: { id: Number(estagiarioId) } });
+  const estagiario = await prisma.estagiario.findUnique({
+    where: { id: Number(estagiarioId) },
+    include: { usuario: { select: { nome: true } } },
+  });
 
   if (!estagiario || estagiario.valorConsulta === null) {
     return res.status(404).json({ codigo: "msg_estagiario_indisponivel", mensagem: "Estagiário não encontrado ou sem perfil de atendimento configurado." });
+  }
+
+  if (!estagiario.chavePix) {
+    return res.status(400).json({
+      codigo: "msg_estagiario_sem_pix",
+      mensagem: "Este estagiário ainda não cadastrou uma chave PIX para receber pagamentos.",
+    });
   }
 
   let tipoConsulta = estagiario.tipoAtendimento;
@@ -126,23 +142,46 @@ router.post("/", autenticar, exigirTipo("paciente"), async (req, res) => {
       dataHora: dataHoraSelecionada,
       tipo: tipoConsulta,
       valor: estagiario.valorConsulta,
-      linkVideo: tipoConsulta === "online" ? gerarLinkTeleconsulta() : null,
+      status: "aguardando_pagamento",
       pacienteId: req.usuario.id,
       estagiarioId: estagiario.id,
     },
-    include: {
-      paciente: { include: { usuario: { select: { nome: true } } } },
-      estagiario: { include: { usuario: { select: { nome: true } } } },
+  });
+
+  const txid = `PSICOLIGA${String(consulta.id).padStart(8, "0")}`;
+  const pixCopiaECola = gerarPixCopiaECola({
+    chave: estagiario.chavePix,
+    nomeRecebedor: estagiario.usuario.nome,
+    cidade: process.env.PIX_CIDADE || "CAXIAS DO SUL",
+    valor: estagiario.valorConsulta,
+    txid,
+  });
+  const qrCode = await QRCode.toDataURL(pixCopiaECola, { margin: 1, width: 280 });
+
+  await prisma.pagamento.create({
+    data: {
+      consultaId: consulta.id,
+      valor: estagiario.valorConsulta,
+      chavePix: estagiario.chavePix,
+      txid,
+      pixCopiaECola,
+      qrCode,
+      expiraEm: new Date(Date.now() + RESERVA_MINUTOS * 60 * 1000),
     },
   });
 
-  // RNF3.1 - notificação de confirmação (simulada: sem serviço real de e-mail/WhatsApp neste projeto)
+  const completa = await prisma.consulta.findUnique({ where: { id: consulta.id }, include: INCLUDE_CONSULTA });
+
+  // RNF5.1 - envio do link de pagamento ao paciente (simulado: sem serviço real de e-mail/WhatsApp)
   console.log(
-    `[NOTIFICAÇÃO SIMULADA] Consulta confirmada em ${consulta.dataHora.toLocaleString("pt-BR")} entre ${consulta.paciente.usuario.nome} e ${consulta.estagiario.usuario.nome}.` +
-      (consulta.linkVideo ? ` Link da videochamada: ${consulta.linkVideo}` : "")
+    `[NOTIFICAÇÃO SIMULADA] Horário de ${completa.dataHora.toLocaleString("pt-BR")} reservado para ${completa.paciente.usuario.nome}. ` +
+      `Pague via PIX em até ${RESERVA_MINUTOS} minutos: /pagamento/${consulta.id}`
   );
 
-  return res.status(201).json({ mensagem: "Consulta agendada com sucesso.", consulta: formatarConsulta(consulta) });
+  return res.status(201).json({
+    mensagem: `Horário reservado. Realize o pagamento via PIX em até ${RESERVA_MINUTOS} minutos para confirmar a consulta.`,
+    consulta: formatarConsulta(completa),
+  });
 });
 
 // Lista as consultas do usuário logado (paciente ou estagiário)
@@ -158,17 +197,17 @@ router.get("/minhas", autenticar, async (req, res) => {
   const consultas = await prisma.consulta.findMany({
     where,
     orderBy: { dataHora: "asc" },
-    include: {
-      paciente: { include: { usuario: { select: { nome: true } } } },
-      estagiario: { include: { usuario: { select: { nome: true } } } },
-    },
+    include: INCLUDE_CONSULTA,
   });
 
   return res.json({ consultas: consultas.map(formatarConsulta) });
 });
 
 async function buscarConsultaDoUsuario(req, res) {
-  const consulta = await prisma.consulta.findUnique({ where: { id: Number(req.params.id) } });
+  const consulta = await prisma.consulta.findUnique({
+    where: { id: Number(req.params.id) },
+    include: { pagamento: true },
+  });
 
   if (!consulta) {
     res.status(404).json({ codigo: "msg_consulta_nao_encontrada", mensagem: "Consulta não encontrada." });
@@ -230,10 +269,7 @@ router.put("/:id/remarcar", autenticar, exigirTipo("paciente"), async (req, res)
   const atualizada = await prisma.consulta.update({
     where: { id: consulta.id },
     data: { dataHora: novaData, lembreteEnviado: false },
-    include: {
-      paciente: { include: { usuario: { select: { nome: true } } } },
-      estagiario: { include: { usuario: { select: { nome: true } } } },
-    },
+    include: INCLUDE_CONSULTA,
   });
 
   console.log(`[NOTIFICAÇÃO SIMULADA] Consulta remarcada para ${atualizada.dataHora.toLocaleString("pt-BR")}.`);
@@ -246,12 +282,13 @@ router.put("/:id/cancelar", autenticar, exigirTipo("paciente", "estagiario"), as
   const consulta = await buscarConsultaDoUsuario(req, res);
   if (!consulta) return;
 
-  if (consulta.status !== "agendada") {
+  if (!["agendada", "aguardando_pagamento"].includes(consulta.status)) {
     return res.status(400).json({ codigo: "msg_consulta_nao_cancelavel", mensagem: "Esta consulta já foi cancelada ou realizada." });
   }
 
   // RNF3.3 - cancelamentos devem ser permitidos com no mínimo 12 horas de antecedência
-  if (horasAte(consulta.dataHora) < HORAS_MINIMAS_CANCELAMENTO) {
+  // (uma reserva ainda não paga pode ser desistida a qualquer momento)
+  if (consulta.status === "agendada" && horasAte(consulta.dataHora) < HORAS_MINIMAS_CANCELAMENTO) {
     return res.status(400).json({
       codigo: "msg_prazo_cancelamento",
       mensagem: `Cancelamentos devem ser permitidos com no mínimo ${HORAS_MINIMAS_CANCELAMENTO} horas de antecedência.`,
@@ -261,11 +298,12 @@ router.put("/:id/cancelar", autenticar, exigirTipo("paciente", "estagiario"), as
   const atualizada = await prisma.consulta.update({
     where: { id: consulta.id },
     data: { status: "cancelada", canceladoPor: req.usuario.tipoUsuario },
-    include: {
-      paciente: { include: { usuario: { select: { nome: true } } } },
-      estagiario: { include: { usuario: { select: { nome: true } } } },
-    },
+    include: INCLUDE_CONSULTA,
   });
+
+  if (consulta.pagamento?.status === "pendente") {
+    await prisma.pagamento.update({ where: { id: consulta.pagamento.id }, data: { status: "cancelado" } });
+  }
 
   // RNF3.4 - a agenda do estagiário é liberada automaticamente (o horário deixa de contar como ocupado)
   console.log(`[NOTIFICAÇÃO SIMULADA] Consulta de ${atualizada.dataHora.toLocaleString("pt-BR")} cancelada por ${req.usuario.tipoUsuario}.`);

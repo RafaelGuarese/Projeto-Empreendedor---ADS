@@ -5,7 +5,9 @@ Implementação inicial da plataforma Psicoliga, cobrindo os requisitos funciona
 - **RF1 — Cadastro e Autenticação de Usuário**: cadastro (paciente/estagiário/professor), login, bloqueio após 3 tentativas incorretas, recuperação de senha por e-mail.
 - **RF2 — Busca de Atendimento**: busca de estagiários por abordagem, especialidade, tipo de atendimento e horário, com ordenação por preço/disponibilidade/avaliação.
 - **RF3 — Agendamento de Consultas**: paciente agenda, remarca ou cancela consultas a partir dos horários semanais do estagiário; estagiário também pode cancelar. Cancelamentos/remarcações exigem 12h de antecedência. Notificação de confirmação e lembrete 24h antes são simulados no console do backend.
-- **RF4 — Teleconsultas**: ao agendar uma consulta online, o sistema gera automaticamente um link único de videochamada (Jitsi Meet), disponível para paciente e estagiário na tela "Meus Agendamentos".
+- **RF4 — Teleconsultas**: ao confirmar uma consulta online, o sistema gera automaticamente um link único de videochamada (Jitsi Meet), disponível para paciente e estagiário na tela "Meus Agendamentos".
+- **RF5 — Pagamentos**: o estagiário cadastra sua chave PIX no perfil. Ao agendar, o paciente recebe QR Code e código "copia e cola" (BR Code no padrão do Banco Central) com o valor da consulta, paga no app do banco e informa o pagamento — o sistema gera um comprovante para o estagiário, que confirma ou recusa o recebimento.
+- **RF6 — Prontuário Eletrônico**: o estagiário registra e edita sessões (data, duração, descrição, observações) dos pacientes atendidos, com busca por paciente. O conteúdo clínico é criptografado no banco (AES-256-GCM) e só é acessível ao estagiário responsável e ao seu professor orientador (somente leitura).
 
 
 ## Stack
@@ -49,9 +51,16 @@ Criadas pelo script de seed (`backend/prisma/seed.js`), todas com senha `Senha12
 | Estagiário | leonardo.estagiario@psicoliga.com |
 | Professor  | professor@psicoliga.com         |
 
-## Observações de escopo (RF3/RF4)
+## Configuração (`backend/.env`)
 
-- O agendamento não exige pagamento prévio (RF5 ainda não implementado) — a consulta é confirmada diretamente após a escolha do horário.
+O arquivo `.env` não vai para o Git. Copie `backend/.env.example` para `backend/.env` e ajuste os valores. Atenção ao `PRONTUARIO_SECRET`: é a chave que criptografa os prontuários — se ela mudar, os registros já gravados deixam de poder ser lidos.
+
+## Observações de escopo
+
 - Os horários disponíveis para agendamento são gerados a partir da disponibilidade semanal cadastrada em "Meu Perfil de Atendimento" (ex: "Segunda - Manhã"), projetada para as próximas 4 semanas.
 - O link de teleconsulta usa o Jitsi Meet (sala pública, sem necessidade de credenciais de API) como plataforma de videochamada.
+- **Fluxo de pagamento**: ao escolher o horário, ele fica reservado por 30 minutos aguardando o PIX. Quando o paciente informa o pagamento, a consulta é confirmada e o comprovante vai para o estagiário. Reservas não pagas no prazo são liberadas automaticamente.
+- **O sistema não verifica o PIX junto ao banco** (não há integração com gateway de pagamento): o pagamento acontece direto entre o paciente e a chave do estagiário, e é o estagiário quem confere o crédito na conta e confirma (ou recusa, o que cancela a consulta).
+- Notificações (confirmação, lembrete 24h antes, comprovante enviado) são simuladas no console do backend.
+- Os estagiários de demonstração do seed usam o próprio e-mail fictício como chave PIX — o QR Code é válido, mas não aponta para uma conta real.
 

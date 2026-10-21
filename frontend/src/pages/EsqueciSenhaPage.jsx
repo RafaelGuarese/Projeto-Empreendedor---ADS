@@ -2,6 +2,9 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import api from "../api/client.js";
+import AuthLayout from "../components/AuthLayout.jsx";
+import Icone from "../components/Icone.jsx";
+import { Alerta } from "../components/Ui.jsx";
 
 export default function EsqueciSenhaPage() {
   const [email, setEmail] = useState("");
@@ -32,31 +35,33 @@ export default function EsqueciSenhaPage() {
   }
 
   return (
-    <div className="pagina-central">
-      <div className="cartao-auth">
-        <div className="logo-auth">
-          <div className="titulo">Recuperar senha</div>
-          <div className="subtitulo">Enviaremos um link de redefinição para o seu e-mail</div>
+    <AuthLayout titulo="Recuperar senha" subtitulo="Informe o e-mail da sua conta e enviaremos um link para criar uma nova senha.">
+      <form onSubmit={aoSubmeter} noValidate>
+        {erro && <Alerta tipo="erro">{erro}</Alerta>}
+        {mensagem && <Alerta tipo="sucesso">{mensagem}</Alerta>}
+
+        <div className="campo">
+          <label htmlFor="email">E-mail cadastrado</label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="seuemail@exemplo.com"
+            autoComplete="username"
+          />
         </div>
 
-        <form onSubmit={aoSubmeter} style={{ marginTop: 24 }}>
-          {erro && <div className="alerta alerta-erro">{erro}</div>}
-          {mensagem && <div className="alerta alerta-sucesso">{mensagem}</div>}
+        <button className="botao botao-primario botao-bloco botao-grande" type="submit" disabled={enviando}>
+          {enviando ? "Enviando..." : "Enviar link de redefinição"}
+        </button>
+      </form>
 
-          <div className="campo">
-            <label htmlFor="email">E-mail cadastrado</label>
-            <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-
-          <button className="botao-primario" type="submit" disabled={enviando}>
-            {enviando ? "Enviando..." : "Enviar link de redefinição"}
-          </button>
-        </form>
-
-        <div className="linha-divisoria">
-          <Link to="/login">Voltar para o login</Link>
-        </div>
-      </div>
-    </div>
+      <p className="auth-rodape">
+        <Link to="/login" className="link-voltar" style={{ margin: 0 }}>
+          <Icone nome="voltar" tamanho={16} /> Voltar para o login
+        </Link>
+      </p>
+    </AuthLayout>
   );
 }

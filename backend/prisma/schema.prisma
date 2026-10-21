@@ -28,51 +28,95 @@ model Usuario {
 }
 
 model Paciente {
-  id                 Int        @id
-  usuario            Usuario    @relation(fields: [id], references: [id], onDelete: Cascade)
+  id                 Int          @id
+  usuario            Usuario      @relation(fields: [id], references: [id], onDelete: Cascade)
   historicoConsultas String?
   consultas          Consulta[]
+  prontuarios        Prontuario[]
 }
 
 // Especialização de usuário que oferece atendimento (usada na busca - RF2)
 model Estagiario {
-  id                  Int      @id
-  usuario             Usuario  @relation(fields: [id], references: [id], onDelete: Cascade)
+  id                  Int          @id
+  usuario             Usuario      @relation(fields: [id], references: [id], onDelete: Cascade)
   registroAcademico   String?
   abordagem           String? // ex: TCC, Psicanálise, Humanista
-  especialidades      String? // JSON string: ["ansiedade","depressao"]
-  tipoAtendimento     String  @default("ambos") // presencial | online | ambos
-  horariosDisponiveis String? // JSON string: ["Segunda - Manhã", ...]
+  especialidades      String? // lista separada por vírgula: "ansiedade,depressao"
+  tipoAtendimento     String       @default("ambos") // presencial | online | ambos
+  horariosDisponiveis String? // lista separada por vírgula: "Segunda - Manhã,..."
   valorConsulta       Float?
-  avaliacao           Float      @default(0)
+  avaliacao           Float        @default(0)
+  tipoChavePix        String? // cpf | cnpj | email | telefone | aleatoria
+  chavePix            String? // chave normalizada no formato aceito pelo BR Code
   professorId         Int?
-  professor           Professor? @relation(fields: [professorId], references: [id])
+  professor           Professor?   @relation(fields: [professorId], references: [id])
   consultas           Consulta[]
+  prontuarios         Prontuario[]
 }
 
 model Professor {
-  id          Int          @id
-  usuario     Usuario      @relation(fields: [id], references: [id], onDelete: Cascade)
+  id           Int          @id
+  usuario      Usuario      @relation(fields: [id], references: [id], onDelete: Cascade)
   departamento String?
-  estagiarios Estagiario[]
+  estagiarios  Estagiario[]
 }
 
 // Agendamento de consulta entre paciente e estagiário (RF3) - inclui dados de teleconsulta (RF4)
 model Consulta {
-  id             Int        @id @default(autoincrement())
-  dataHora       DateTime
-  status         String     @default("agendada") // agendada | realizada | cancelada
-  tipo           String // presencial | online
-  linkVideo      String?
-  valor          Float?
-  canceladoPor   String? // paciente | estagiario
-  lembreteEnviado Boolean   @default(false)
-  createdAt      DateTime   @default(now())
+  id              Int        @id @default(autoincrement())
+  dataHora        DateTime
+  status          String     @default("aguardando_pagamento") // aguardando_pagamento | agendada | realizada | cancelada
+  tipo            String // presencial | online
+  linkVideo       String?
+  valor           Float?
+  canceladoPor    String? // paciente | estagiario | sistema
+  lembreteEnviado Boolean    @default(false)
+  createdAt       DateTime   @default(now())
+
+  pacienteId   Int
+  paciente     Paciente   @relation(fields: [pacienteId], references: [id])
+  estagiarioId Int
+  estagiario   Estagiario @relation(fields: [estagiarioId], references: [id])
+  pagamento    Pagamento?
+
+  @@index([estagiarioId, dataHora])
+}
+
+// Pagamento via PIX na chave do estagiário (RF5)
+model Pagamento {
+  id                 Int       @id @default(autoincrement())
+  valor              Float
+  status             String    @default("pendente") // pendente | em_analise | aprovado | recusado | expirado
+  formaPagamento     String    @default("pix")
+  chavePix           String
+  txid               String
+  pixCopiaECola      String
+  qrCode             String // imagem do QR Code (data URL)
+  idTransacaoBanco   String? // identificador informado pelo paciente (ex: ID/E2E do comprovante do banco)
+  numeroComprovante  String?   @unique
+  expiraEm           DateTime
+  pagoEm             DateTime?
+  confirmadoEm       DateTime?
+  createdAt          DateTime  @default(now())
+
+  consultaId Int      @unique
+  consulta   Consulta @relation(fields: [consultaId], references: [id])
+}
+
+// Registro de sessão no prontuário eletrônico (RF6). Descrição e observações ficam criptografadas.
+model Prontuario {
+  id          Int      @id @default(autoincrement())
+  dataSessao  DateTime
+  duracao     Int // minutos
+  descricao   String // criptografado (AES-256-GCM)
+  observacoes String? // criptografado (AES-256-GCM)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   pacienteId   Int
   paciente     Paciente   @relation(fields: [pacienteId], references: [id])
   estagiarioId Int
   estagiario   Estagiario @relation(fields: [estagiarioId], references: [id])
 
-  @@index([estagiarioId, dataHora])
+  @@index([estagiarioId, pacienteId])
 }
